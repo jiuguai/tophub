@@ -54,7 +54,7 @@ def get_info(doc, up_date ,max_item=10):
     col_l = ["info_class", "plat", "rank", "title", "hot", "hot_class", "up_date", "url"]
     return col_l, data
 
-def store_data(col_l, data):
+def store_data(col_l, data, date):
     
     col = ",".join(col_l)
     val = ",".join(np.repeat("%s",len(col_l)))
@@ -67,20 +67,22 @@ def store_data(col_l, data):
         "database":"today",
         "charset" :"utf8mb4"
     }
-    try:
-        conn = pymysql.connect(**MYSQL_MALL_DIC)
-        cursor =  conn.cursor()
-        # 当天只 保留一份  其他都删除
-        cursor.execute("select max(up_date) from info")
-        result = cursor.fetchone()
-        cursor.execute("delete from info where up_date=%s",result)
+    
+    conn = pymysql.connect(**MYSQL_MALL_DIC)
+    cursor =  conn.cursor()
+    # 当天只 保留一份  其他都删除
+    cursor.execute("select max(up_date) from info")
+    result = cursor.fetchone()[0]
+    if result is not None and date == result:
+        del_sql = 'delete from info where up_date="%s"' %result.strftime("%Y-%m-%d")
+        print(del_sql)
+        cursor.execute(del_sql)
         conn.commit()
 
-        cursor.executemany(sql, data)
-        conn.commit()
-        conn.close()
-    except:
-        conn.close()
+    cursor.executemany(sql, data)
+    conn.commit()
+    conn.close()
+
 
 
     
@@ -92,7 +94,7 @@ def run():
     print('提取数据')
     col_l, data = get_info(doc, today, 10)
     print('存入数据库')
-    store_data(col_l, data)
+    store_data(col_l, data, today)
     print('执行完成')
 
 if __name__ == "__main__":
